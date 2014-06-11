@@ -1,5 +1,8 @@
 package com.hekangping.testmap;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import android.graphics.Color;
 import android.graphics.Point;
 import android.os.Bundle;
@@ -32,6 +35,8 @@ import com.baidu.mapapi.map.MyLocationConfigeration;
 import com.baidu.mapapi.map.MyLocationConfigeration.LocationMode;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.map.OverlayOptions;
+import com.baidu.mapapi.map.PolylineOptions;
+import com.baidu.mapapi.map.TextOptions;
 import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.utils.DistanceUtil;
 
@@ -62,6 +67,8 @@ public class MainActivity extends ActionBarActivity {
 
 	private Marker mMarkerA;
 	private InfoWindow mInfoWindow;
+	// 定位点
+	private List<LatLng> points = new ArrayList<LatLng>();
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -115,7 +122,7 @@ public class MainActivity extends ActionBarActivity {
 		LocationClientOption option = new LocationClientOption();
 		option.setOpenGps(true);// 打开gps
 		option.setCoorType("bd09ll"); // 设置坐标类型
-		option.setScanSpan(30000); // 每隔30s定位一次
+		option.setScanSpan(10000); // 每隔10s定位一次
 		option.setAddrType("all"); // 如不加这个,location.getAddrStr()得到的反向地理地址就是null
 		mLocClient.setLocOption(option);
 		mLocClient.start();
@@ -173,14 +180,18 @@ public class MainActivity extends ActionBarActivity {
 			if (location == null || mMapView == null)
 				return;
 			objToast.toastShow("正在定位");
+			double dx = Math.random();
+			double dy = Math.random();
 			MyLocationData locData = new MyLocationData.Builder()
 					.accuracy(location.getRadius())
 					// 此处设置开发者获取到的方向信息，顺时针0-360
-					.direction(100).latitude(location.getLatitude())
-					.longitude(location.getLongitude()).build();
-
-			LatLng objNewPosition = new LatLng(location.getLatitude(),
-					location.getLongitude());
+					.direction(100)
+					// TODO: + dx ; + dy是调试代码，随机改变定位位置
+					.latitude(location.getLatitude() + dx)
+					.longitude(location.getLongitude() + dy).build();
+			// TODO: + dx ; + dy是调试代码，随机改变定位位置
+			LatLng objNewPosition = new LatLng(location.getLatitude() + dx,
+					location.getLongitude() + dy);
 
 			if (lastPosition != null) {
 				LatLng objLastPosition = new LatLng(lastPosition.getLatitude(),
@@ -192,11 +203,25 @@ public class MainActivity extends ActionBarActivity {
 				// location.isCellChangeFlag() ???
 				// 判断新的定位结果和之前定位结果的距离差,小于50就不更新定位结果.
 				if (distance > 50) {
+					// 定位,显示定位图标
 					mBaiduMap.setMyLocationData(locData);
 					lastPosition = location;
 					OverlayOptions ooA = new MarkerOptions()
 							.position(objNewPosition).icon(bdA).zIndex(9);
 					mMarkerA = (Marker) (mBaiduMap.addOverlay(ooA));
+					// 绘制路线
+					points.add(objNewPosition);
+					OverlayOptions ooPolyline = new PolylineOptions().width(2)
+							.color(0xAAFF0000).points(points);
+					mBaiduMap.addOverlay(ooPolyline);
+					// 构建文字Option对象，用于在地图上添加文字,显示距离
+					OverlayOptions textOption = new TextOptions()
+							.bgColor(0xAAFFFF00).fontSize(24)
+							.fontColor(0xFFFF00FF)
+							.text("   " + Math.round(distance) + "米")
+							.rotate(-30).position(objNewPosition);
+					// 在地图上添加该文字对象并显示
+					mBaiduMap.addOverlay(textOption);
 				}
 			} else {
 				mBaiduMap.setMyLocationData(locData);
@@ -204,14 +229,17 @@ public class MainActivity extends ActionBarActivity {
 				OverlayOptions ooA = new MarkerOptions()
 						.position(objNewPosition).icon(bdA).zIndex(9);
 				mMarkerA = (Marker) (mBaiduMap.addOverlay(ooA));
+				// 添加起点到路线中
+				points.add(objNewPosition);
 			}
 			if (isFirstLoc) {
 				isFirstLoc = false;
-				LatLng ll = new LatLng(location.getLatitude(),
-						location.getLongitude());
-				MapStatusUpdate msu = MapStatusUpdateFactory.zoomTo(17.0f);
+				// 第一次定位，定位后放大地图
+				MapStatusUpdate msu = MapStatusUpdateFactory.zoomTo(18.0f);
 				mBaiduMap.setMapStatus(msu);
-				MapStatusUpdate u = MapStatusUpdateFactory.newLatLng(ll);
+				// 第一次定位，将定位点移动到屏幕中心位置
+				MapStatusUpdate u = MapStatusUpdateFactory
+						.newLatLng(objNewPosition);
 				mBaiduMap.animateMapStatus(u);
 			}
 
