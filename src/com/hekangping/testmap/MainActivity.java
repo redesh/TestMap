@@ -16,10 +16,8 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.RadioGroup.OnCheckedChangeListener;
 import android.widget.Toast;
-import android.widget.ZoomControls;
 
 import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
@@ -59,6 +57,11 @@ import com.baidu.mapapi.overlayutil.PoiOverlay;
 import com.baidu.mapapi.search.core.CityInfo;
 import com.baidu.mapapi.search.core.PoiInfo;
 import com.baidu.mapapi.search.core.SearchResult;
+import com.baidu.mapapi.search.geocode.GeoCodeResult;
+import com.baidu.mapapi.search.geocode.GeoCoder;
+import com.baidu.mapapi.search.geocode.OnGetGeoCoderResultListener;
+import com.baidu.mapapi.search.geocode.ReverseGeoCodeOption;
+import com.baidu.mapapi.search.geocode.ReverseGeoCodeResult;
 import com.baidu.mapapi.search.poi.OnGetPoiSearchResultListener;
 import com.baidu.mapapi.search.poi.PoiDetailResult;
 import com.baidu.mapapi.search.poi.PoiDetailSearchOption;
@@ -72,7 +75,7 @@ import com.baidu.mapapi.utils.DistanceUtil;
 
 public class MainActivity extends ActionBarActivity implements
 		OnGetPoiSearchResultListener, OnGetSuggestionResultListener,
-		CloudListener {
+		CloudListener, OnGetGeoCoderResultListener {
 	public static final String TAG = "MainActivity";
 	// 定位相关
 	LocationClient mLocClient;
@@ -96,7 +99,8 @@ public class MainActivity extends ActionBarActivity implements
 	private ToastShow objToast = new ToastShow(MainActivity.this);
 
 	// 初始化全局 bitmap 信息，不用时及时 recycle
-	BitmapDescriptor bdA = null;
+	BitmapDescriptor bm = null;
+	BitmapDescriptor bd = null;
 
 	private Marker mMarkerA;
 	private InfoWindow mInfoWindow;
@@ -112,6 +116,10 @@ public class MainActivity extends ActionBarActivity implements
 	private AutoCompleteTextView keyWorldsView = null;
 	private ArrayAdapter<String> sugAdapter = null;
 	private int load_Index = 0;
+
+	// 反向地理编码
+	private GeoCoder mSearch = null; // 搜索模块，也可去掉地图模块独立使用
+	private String strGeoString = "";
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -130,7 +138,9 @@ public class MainActivity extends ActionBarActivity implements
 				android.R.layout.simple_dropdown_item_1line);
 		keyWorldsView.setAdapter(sugAdapter);
 
-		bdA = BitmapDescriptorFactory.fromResource(R.drawable.icon_marka);
+		bm = BitmapDescriptorFactory.fromResource(R.drawable.icon_bluemark);
+		bd = BitmapDescriptorFactory.fromResource(R.drawable.icon_gcoding);
+
 		requestLocButton = (Button) findViewById(R.id.button1);
 		mCurrentMode = LocationMode.NORMAL;
 		requestLocButton.setText("普通");
@@ -168,16 +178,21 @@ public class MainActivity extends ActionBarActivity implements
 		// 地图初始化
 		mMapView = (MapView) findViewById(R.id.bmapsView);
 		mBaiduMap = mMapView.getMap();
+
+		// 初始化搜索模块，注册事件监听
+		mSearch = GeoCoder.newInstance();
+		mSearch.setOnGetGeoCodeResultListener(this);
+
 		// 开启定位图层
 		mBaiduMap.setMyLocationEnabled(true);
 
 		// 获取mapview中的缩放控件
-		ZoomControls zoomControls = (ZoomControls) mMapView.getChildAt(2);
+		// ZoomControls zoomControls = (ZoomControls) mMapView.getChildAt(2);
 		mMapView.removeViewAt(2);
 		// 调整缩放控件的位置
 		// zoomControls.setPadding(0, 0, 0, 100);
 		// 获取mapview中的百度地图图标
-		ImageView iv = (ImageView) mMapView.getChildAt(1);
+		// ImageView iv = (ImageView) mMapView.getChildAt(1);
 		mMapView.removeViewAt(1);
 		// 调整百度地图图标的位置
 		// iv.setPadding(0, 0, 0, 100);
@@ -213,6 +228,12 @@ public class MainActivity extends ActionBarActivity implements
 				Button button = new Button(getApplicationContext());
 				button.setBackgroundResource(R.drawable.popup);
 				final LatLng objMarkerPosition = marker.getPosition();
+				// 反向地理编码
+				/**
+				 * mSearch.reverseGeoCode(new ReverseGeoCodeOption()
+				 * .location(objMarkerPosition));
+				 */
+
 				Point p = mBaiduMap.getProjection().toScreenLocation(
 						objMarkerPosition);
 				p.y -= 47;
@@ -220,8 +241,9 @@ public class MainActivity extends ActionBarActivity implements
 				OnInfoWindowClickListener listener = null;
 				if (marker == mMarkerA) {
 					button.setTextColor(Color.BLACK);
-					button.setText("位置\n经度:" + objMarkerPosition.longitude
-							+ "  纬度:" + objMarkerPosition.latitude);
+					button.setText(strGeoString + "\n经度:"
+							+ objMarkerPosition.longitude + "  纬度:"
+							+ objMarkerPosition.latitude);
 					listener = new OnInfoWindowClickListener() {
 						public void onInfoWindowClick() {
 							mBaiduMap.hideInfoWindow();
@@ -305,7 +327,7 @@ public class MainActivity extends ActionBarActivity implements
 					lastPosition = location;
 					// 图标标记定位点
 					OverlayOptions ooA = new MarkerOptions()
-							.position(objNewPosition).icon(bdA).zIndex(9);
+							.position(objNewPosition).icon(bm).zIndex(9);
 					mMarkerA = (Marker) (mBaiduMap.addOverlay(ooA));
 					// 绘制路线
 					points.add(objNewPosition);
@@ -315,6 +337,7 @@ public class MainActivity extends ActionBarActivity implements
 					// 构建文字Option对象，用于在地图上添加文字,显示距离
 					OverlayOptions textOption = new TextOptions()
 							.fontSize(24)
+							.bgColor(0xAAFFFF00)
 							.fontColor(0xFFFF00FF)
 							.text("   "
 									+ DataConvertUtil
@@ -327,7 +350,7 @@ public class MainActivity extends ActionBarActivity implements
 				mBaiduMap.setMyLocationData(locData);
 				lastPosition = location;
 				OverlayOptions ooA = new MarkerOptions()
-						.position(objNewPosition).icon(bdA).zIndex(9);
+						.position(objNewPosition).icon(bm).zIndex(9);
 				mMarkerA = (Marker) (mBaiduMap.addOverlay(ooA));
 				// 添加起点到路线中
 				points.add(objNewPosition);
@@ -398,6 +421,7 @@ public class MainActivity extends ActionBarActivity implements
 			} else if (location.getLocType() == BDLocation.TypeNetWorkLocation) {
 				sb.append("\naddr : ");
 				sb.append(location.getAddrStr());
+				strGeoString = location.getAddrStr();
 			}
 
 			Log.d(TAG, sb.toString());
@@ -475,7 +499,7 @@ public class MainActivity extends ActionBarActivity implements
 		mMapView = null;
 		super.onDestroy();
 		// 回收 bitmap 资源
-		bdA.recycle();
+		bm.recycle();
 	}
 
 	@Override
@@ -561,9 +585,8 @@ public class MainActivity extends ActionBarActivity implements
 			Log.d(TAG,
 					"onGetSearchResult, result length: "
 							+ result.poiList.size());
-			mBaiduMap.clear();
-			BitmapDescriptor bd = BitmapDescriptorFactory
-					.fromResource(R.drawable.icon_gcoding);
+			// mBaiduMap.clear();
+
 			LatLng ll;
 			LatLngBounds.Builder builder = new Builder();
 			for (CloudPoiInfo info : result.poiList) {
@@ -592,6 +615,44 @@ public class MainActivity extends ActionBarActivity implements
 			}
 		}
 
+	}
+
+	@Override
+	public void onGetGeoCodeResult(GeoCodeResult result) {
+		Log.d(TAG, "GEO onGetGeoCodeResult()");
+		if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
+			Toast.makeText(MainActivity.this, "抱歉，未能找到结果", Toast.LENGTH_LONG)
+					.show();
+		}
+		/**
+		 * mBaiduMap.clear(); mBaiduMap.addOverlay(new
+		 * MarkerOptions().position(result.getLocation())
+		 * .icon(BitmapDescriptorFactory .fromResource(R.drawable.icon_marka)));
+		 * mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLng(result
+		 * .getLocation()));
+		 */
+		String strInfo = String.format("纬度：%f 经度：%f",
+				result.getLocation().latitude, result.getLocation().longitude);
+		objToast.toastShow(strInfo);
+	}
+
+	@Override
+	public void onGetReverseGeoCodeResult(ReverseGeoCodeResult result) {
+		Log.d(TAG, "GEO onGetReverseGeoCodeResult()");
+		if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
+			Toast.makeText(MainActivity.this, "抱歉，未能找到结果", Toast.LENGTH_LONG)
+					.show();
+		}
+		/**
+		 * mBaiduMap.clear(); mBaiduMap.addOverlay(new
+		 * MarkerOptions().position(result.getLocation())
+		 * .icon(BitmapDescriptorFactory .fromResource(R.drawable.icon_marka)));
+		 * mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLng(result
+		 * .getLocation()));
+		 */
+		// objToast.toastShow(result.getAddress());
+		strGeoString = result.getAddress();
+		Log.d(TAG, "Address = " + strGeoString);
 	}
 
 }

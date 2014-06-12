@@ -35,6 +35,9 @@ public class ToastShow {
 	// Ð´Êý¾Ý
 	public void writeFile(String fileName, String writestr) throws IOException {
 		try {
+			if (1 == 1) {
+				return;
+			}
 			FileOutputStream fout = context.openFileOutput(fileName,
 					Context.MODE_APPEND);
 			byte[] bytes = writestr.getBytes();
