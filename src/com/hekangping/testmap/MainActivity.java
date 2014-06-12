@@ -2,6 +2,7 @@ package com.hekangping.testmap;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import android.graphics.Color;
 import android.graphics.Point;
@@ -17,6 +18,7 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioGroup.OnCheckedChangeListener;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.baidu.location.BDLocation;
@@ -60,7 +62,6 @@ import com.baidu.mapapi.search.core.SearchResult;
 import com.baidu.mapapi.search.geocode.GeoCodeResult;
 import com.baidu.mapapi.search.geocode.GeoCoder;
 import com.baidu.mapapi.search.geocode.OnGetGeoCoderResultListener;
-import com.baidu.mapapi.search.geocode.ReverseGeoCodeOption;
 import com.baidu.mapapi.search.geocode.ReverseGeoCodeResult;
 import com.baidu.mapapi.search.poi.OnGetPoiSearchResultListener;
 import com.baidu.mapapi.search.poi.PoiDetailResult;
@@ -92,6 +93,7 @@ public class MainActivity extends ActionBarActivity implements
 	// UI相关
 	OnCheckedChangeListener radioButtonListener;
 	Button requestLocButton;
+	TextView locationInfoView;
 	boolean isFirstLoc = true;// 是否首次定位
 	private LatLng objNewPosition = null;
 
@@ -103,6 +105,7 @@ public class MainActivity extends ActionBarActivity implements
 	BitmapDescriptor bd = null;
 
 	private Marker mMarkerA;
+	private Marker objLBSMarker;
 	private InfoWindow mInfoWindow;
 	// 定位点
 	private List<LatLng> points = new ArrayList<LatLng>();
@@ -121,6 +124,10 @@ public class MainActivity extends ActionBarActivity implements
 	private GeoCoder mSearch = null; // 搜索模块，也可去掉地图模块独立使用
 	private String strGeoString = "";
 
+	// LBS结果
+	CloudSearchResult objLBSResult = null;
+	Map<String, String> objLBSMap = null;
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -128,6 +135,7 @@ public class MainActivity extends ActionBarActivity implements
 		// 注意该方法要再setContentView方法之前实现
 		SDKInitializer.initialize(getApplicationContext());
 		setContentView(R.layout.search_layout);
+
 		// 初始化搜索模块，注册搜索事件监听
 		mPoiSearch = PoiSearch.newInstance();
 		mPoiSearch.setOnGetPoiSearchResultListener(this);
@@ -142,6 +150,7 @@ public class MainActivity extends ActionBarActivity implements
 		bd = BitmapDescriptorFactory.fromResource(R.drawable.icon_gcoding);
 
 		requestLocButton = (Button) findViewById(R.id.button1);
+		locationInfoView = (TextView) findViewById(R.id.location_info);
 		mCurrentMode = LocationMode.NORMAL;
 		requestLocButton.setText("普通");
 		OnClickListener btnClickListener = new OnClickListener() {
@@ -228,6 +237,8 @@ public class MainActivity extends ActionBarActivity implements
 				Button button = new Button(getApplicationContext());
 				button.setBackgroundResource(R.drawable.popup);
 				final LatLng objMarkerPosition = marker.getPosition();
+				String strLocation = DataConvertUtil
+						.getLatLngString(objMarkerPosition);
 				// 反向地理编码
 				/**
 				 * mSearch.reverseGeoCode(new ReverseGeoCodeOption()
@@ -239,7 +250,9 @@ public class MainActivity extends ActionBarActivity implements
 				p.y -= 47;
 				LatLng llInfo = mBaiduMap.getProjection().fromScreenLocation(p);
 				OnInfoWindowClickListener listener = null;
-				if (marker == mMarkerA) {
+				locationInfoView.setText("");
+				if (marker.getIcon().hashCode() == mMarkerA.getIcon()
+						.hashCode()) {
 					button.setTextColor(Color.BLACK);
 					button.setText(strGeoString + "\n经度:"
 							+ objMarkerPosition.longitude + "  纬度:"
@@ -249,9 +262,15 @@ public class MainActivity extends ActionBarActivity implements
 							mBaiduMap.hideInfoWindow();
 						}
 					};
+					mInfoWindow = new InfoWindow(button, llInfo, listener);
+					mBaiduMap.showInfoWindow(mInfoWindow);
+				} else if (marker.getIcon().hashCode() == objLBSMarker
+						.getIcon().hashCode()) {
+					locationInfoView.setText("\n经度:"
+							+ objMarkerPosition.longitude + "  纬度:"
+							+ objMarkerPosition.latitude + "\n"
+							+ objLBSMap.get(strLocation));
 				}
-				mInfoWindow = new InfoWindow(button, llInfo, listener);
-				mBaiduMap.showInfoWindow(mInfoWindow);
 				return true;
 			}
 		});
@@ -344,7 +363,7 @@ public class MainActivity extends ActionBarActivity implements
 											.getDistanceString(distance))
 							.rotate(-30).position(objNewPosition); // 在地图上添加该文字对象并显示
 					mBaiduMap.addOverlay(textOption);
-
+					strGeoString = "";
 				}
 			} else {
 				mBaiduMap.setMyLocationData(locData);
@@ -580,6 +599,7 @@ public class MainActivity extends ActionBarActivity implements
 	@Override
 	public void onGetSearchResult(CloudSearchResult result, int eror) {
 		Log.d(TAG, "LBS: onGetSearchResult() status=" + result.status);
+		this.objLBSResult = null;
 		if (result != null && result.poiList != null
 				&& result.poiList.size() > 0) {
 			Log.d(TAG,
@@ -592,12 +612,14 @@ public class MainActivity extends ActionBarActivity implements
 			for (CloudPoiInfo info : result.poiList) {
 				ll = new LatLng(info.latitude, info.longitude);
 				OverlayOptions oo = new MarkerOptions().icon(bd).position(ll);
-				mBaiduMap.addOverlay(oo);
+				objLBSMarker = (Marker) (mBaiduMap.addOverlay(oo));
 				builder.include(ll);
 			}
 			LatLngBounds bounds = builder.build();
 			MapStatusUpdate u = MapStatusUpdateFactory.newLatLngBounds(bounds);
 			mBaiduMap.animateMapStatus(u);
+			this.objLBSResult = result;
+			this.objLBSMap = DataConvertUtil.resolveLBSResult(objLBSResult);
 		}
 	}
 

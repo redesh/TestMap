@@ -79,6 +79,18 @@
         android:layout_height="0dp"
         android:layout_weight="3"
         android:orientation="vertical" >
+
+        <TextView
+            android:id="@+id/location_info"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:ellipsize="marquee"
+            android:focusable="false"
+            android:focusableInTouchMode="true"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:text="@string/location_info_text"
+            android:textColor="#000000"
+            android:textSize="12sp" />
     </LinearLayout>
 
 </LinearLayout>
