@@ -54,7 +54,9 @@
         android:theme="@style/AppTheme" >
         <meta-data
             android:name="com.baidu.lbsapi.API_KEY"
-            android:value="587ea0866317434d0dedd9f3b9c7d932" />
+            android:value="4PjtgOsbz0RtkRy9aTX85amS" />
+        <!-- 旧版的key 587ea0866317434d0dedd9f3b9c7d932 -->
+         <!-- 新版的key 4PjtgOsbz0RtkRy9aTX85amS -->
 
         <activity
             android:name="com.hekangping.testmap.MainActivity"

@@ -2,6 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    android:background="#FFFFFF"
     android:orientation="vertical" >
 
     <LinearLayout
@@ -10,61 +11,68 @@
         android:layout_weight="2"
         android:orientation="horizontal" >
 
-        <RelativeLayout
+        <LinearLayout
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
-            android:gravity="center_vertical" >
+            android:gravity="center_vertical"
+            android:orientation="horizontal" >
 
             <ImageView
                 android:id="@+id/img_back"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_alignParentLeft="true"
-                android:layout_centerVertical="true"
+                android:layout_weight="1"
                 android:background="@android:color/white"
+                android:clickable="true"
+                android:focusable="true"
                 android:src="@drawable/back" >
             </ImageView>
 
+            <AutoCompleteTextView
+                android:id="@+id/searchkeytext"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="3"
+                android:ellipsize="end"
+                android:inputType="text"
+                android:text="@string/searchkey"
+                android:textSize="12sp" />
+
             <ImageView
                 android:id="@+id/img_search"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
-                android:layout_toRightOf="@id/img_back"
+                android:layout_weight="1"
                 android:background="@android:color/white"
+                android:clickable="true"
+                android:focusable="true"
+                android:onClick="searchButtonProcess"
                 android:src="@drawable/search" >
             </ImageView>
 
             <ImageView
                 android:id="@+id/img_list_text"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_alignParentRight="true"
-                android:layout_centerVertical="true"
-                android:layout_toRightOf="@id/searchkeytext"
+                android:layout_weight="1"
                 android:background="@android:color/white"
+                android:clickable="true"
+                android:focusable="true"
                 android:src="@drawable/list_text" >
             </ImageView>
-
-            <TextView
-                android:id="@+id/searchkeytext"
-                android:layout_width="fill_parent"
-                android:layout_height="30dp"
-                android:layout_centerVertical="true"
-                android:layout_toLeftOf="@+id/img_list_text"
-                android:layout_toRightOf="@id/img_search"
-                android:ellipsize="end"
-                android:text="@string/searchkey"
-                android:textSize="18sp" />
-        </RelativeLayout>
+        </LinearLayout>
     </LinearLayout>
 
-    <com.baidu.mapapi.map.MapView
-        android:id="@+id/bmapsView"
+    <LinearLayout
         android:layout_width="fill_parent"
         android:layout_height="0dp"
         android:layout_weight="10"
-        android:clickable="true" />
+        android:orientation="vertical" >
+
+        <include
+            android:id="@+id/baidumap"
+            layout="@layout/activity_main" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="fill_parent"
