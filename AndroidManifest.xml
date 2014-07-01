@@ -39,6 +39,8 @@
     </uses-permission>
     <uses-permission android:name="android.permission.WRITE_SETTINGS" >
     </uses-permission>
+    
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <supports-screens
         android:anyDensity="true"
@@ -60,6 +62,15 @@
 
         <activity
             android:name="com.hekangping.testmap.MainActivity"
+            android:configChanges="orientation|keyboardHidden"
+            android:label="@string/app_name"
+            android:screenOrientation="portrait" >
+            <intent-filter>
+            </intent-filter>
+        </activity>
+        
+        <activity
+            android:name="com.hekangping.testmap.CameraActivity"
             android:configChanges="orientation|keyboardHidden"
             android:label="@string/app_name"
             android:screenOrientation="portrait" >
