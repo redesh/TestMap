@@ -56,14 +56,10 @@ public class CameraActivity extends Activity {
 			// application
 			Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
-			fileUri = getOutputMediaFileUri(MEDIA_TYPE_IMAGE); // create a file
-																// to
-																// save the
-																// image
-			intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri); // set the image
-																// file
-																// name
-
+			// create a file to save the image
+			fileUri = getOutputMediaFileUri(MEDIA_TYPE_IMAGE);
+			// set the image file name
+			intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri);
 			// start the image capture Intent
 			startActivityForResult(intent, CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE);
 		}
@@ -114,13 +110,15 @@ public class CameraActivity extends Activity {
 		super.onActivityResult(requestCode, resultCode, data);
 		if (requestCode == CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE) {
 			Log.d(TAG, "onActivityResult()");
-
 			Options opts = new BitmapFactory.Options();
 			opts.inJustDecodeBounds = true;
-			// 计算图片缩放比例
-			final int minSideLength = Math.min(320, 480);
-			opts.inSampleSize = computeSampleSize(opts, minSideLength,
-					320 * 480);
+			// inJustDecodeBounds属性设置为true就可以让解析方法禁止为bitmap分配内存，返回值也不再是一个Bitmap对象，而是null。
+			// 虽然Bitmap是null了，但是BitmapFactory.Options的outWidth、outHeight和outMimeType属性都会被赋值
+			BitmapFactory.decodeFile(mediaFile.getAbsolutePath(), opts);
+			// 图片缩放比例,2的倍数
+			opts.inSampleSize = calculateInSampleSize(opts, 160, 240);
+
+			Log.d(TAG, "opts.inSampleSize=" + opts.inSampleSize);
 			opts.inJustDecodeBounds = false;
 			opts.inInputShareable = true;
 			// 产生的位图将得到像素空间，如果系统gc，那么将被清空。当像素再次被访问，如果Bitmap已经decode，那么将被自动重新解码
@@ -128,54 +126,37 @@ public class CameraActivity extends Activity {
 			// 默认为ARGB_8888
 			opts.inPreferredConfig = Bitmap.Config.RGB_565;
 			opts.inInputShareable = true;// 位图可以共享一个参考输入数据(inputstream、阵列等)
-			opts.inSampleSize = 10;// decode 原图1/4
+			// opts.inSampleSize = 10;// decode 原图1/4
 
 			Bitmap bitmap = BitmapFactory.decodeFile(
 					mediaFile.getAbsolutePath(), opts);
-			mImageView.setImageBitmap(bitmap);
-		}
-	}
-
-	public static int computeSampleSize(BitmapFactory.Options options,
-			int minSideLength, int maxNumOfPixels) {
-		int initialSize = computeInitialSampleSize(options, minSideLength,
-				maxNumOfPixels);
-
-		int roundedSize;
-		if (initialSize <= 8) {
-			roundedSize = 1;
-			while (roundedSize < initialSize) {
-				roundedSize <<= 1;
+			if (bitmap != null) {
+				mImageView.setImageBitmap(bitmap);
 			}
-		} else {
-			roundedSize = (initialSize + 7) / 8 * 8;
 		}
-
-		return roundedSize;
 	}
 
-	private static int computeInitialSampleSize(BitmapFactory.Options options,
-			int minSideLength, int maxNumOfPixels) {
-		double w = options.outWidth;
-		double h = options.outHeight;
+	public static int calculateInSampleSize(BitmapFactory.Options options,
+			int reqWidth, int reqHeight) {
+		// Raw height and width of image
+		final int height = options.outHeight;
+		final int width = options.outWidth;
+		int inSampleSize = 1;
 
-		int lowerBound = (maxNumOfPixels == -1) ? 1 : (int) Math.ceil(Math
-				.sqrt(w * h / maxNumOfPixels));
-		int upperBound = (minSideLength == -1) ? 128 : (int) Math.min(
-				Math.floor(w / minSideLength), Math.floor(h / minSideLength));
+		if (height > reqHeight || width > reqWidth) {
 
-		if (upperBound < lowerBound) {
-			// return the larger one when there is no overlapping zone.
-			return lowerBound;
+			final int halfHeight = height / 2;
+			final int halfWidth = width / 2;
+
+			// Calculate the largest inSampleSize value that is a power of 2 and
+			// keeps both
+			// height and width larger than the requested height and width.
+			while ((halfHeight / inSampleSize) > reqHeight
+					&& (halfWidth / inSampleSize) > reqWidth) {
+				inSampleSize *= 2;
+			}
 		}
-
-		if ((maxNumOfPixels == -1) && (minSideLength == -1)) {
-			return 1;
-		} else if (minSideLength == -1) {
-			return lowerBound;
-		} else {
-			return upperBound;
-		}
+		return inSampleSize;
 	}
 
 	@Override
