@@ -9,9 +9,7 @@ import java.util.Date;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.BitmapFactory.Options;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -19,7 +17,6 @@ import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
 
 /**
  * @author developer
@@ -29,7 +26,6 @@ public class CameraActivity extends Activity {
 
 	private static final int CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE = 100;
 	private Uri fileUri;
-	private ImageView mImageView = null;
 	/** 图片文件存放目录 */
 	private static File mediaStorageDir = null;
 	public static final int MEDIA_TYPE_IMAGE = 1;
@@ -46,7 +42,6 @@ public class CameraActivity extends Activity {
 		Button mButton = (Button) findViewById(R.id.button);
 		mButton.setOnClickListener(new ButtonOnClickListener());
 
-		mImageView = (ImageView) findViewById(R.id.imageView);
 	}
 
 	private class ButtonOnClickListener implements View.OnClickListener {
@@ -110,29 +105,6 @@ public class CameraActivity extends Activity {
 		super.onActivityResult(requestCode, resultCode, data);
 		if (requestCode == CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE) {
 			Log.d(TAG, "onActivityResult()");
-			Options opts = new BitmapFactory.Options();
-			opts.inJustDecodeBounds = true;
-			// inJustDecodeBounds属性设置为true就可以让解析方法禁止为bitmap分配内存，返回值也不再是一个Bitmap对象，而是null。
-			// 虽然Bitmap是null了，但是BitmapFactory.Options的outWidth、outHeight和outMimeType属性都会被赋值
-			BitmapFactory.decodeFile(mediaFile.getAbsolutePath(), opts);
-			// 图片缩放比例,2的倍数
-			opts.inSampleSize = calculateInSampleSize(opts, 160, 240);
-
-			Log.d(TAG, "opts.inSampleSize=" + opts.inSampleSize);
-			opts.inJustDecodeBounds = false;
-			opts.inInputShareable = true;
-			// 产生的位图将得到像素空间，如果系统gc，那么将被清空。当像素再次被访问，如果Bitmap已经decode，那么将被自动重新解码
-			opts.inPurgeable = true;
-			// 默认为ARGB_8888
-			opts.inPreferredConfig = Bitmap.Config.RGB_565;
-			opts.inInputShareable = true;// 位图可以共享一个参考输入数据(inputstream、阵列等)
-			// opts.inSampleSize = 10;// decode 原图1/4
-
-			Bitmap bitmap = BitmapFactory.decodeFile(
-					mediaFile.getAbsolutePath(), opts);
-			if (bitmap != null) {
-				mImageView.setImageBitmap(bitmap);
-			}
 		}
 	}
 
